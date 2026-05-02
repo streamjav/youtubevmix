@@ -132,6 +132,17 @@
       box-shadow: none;
     }
 
+    .doubleclick-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 26px;
+      z-index: 3;
+      background: rgba(0,0,0,.02);
+      cursor: default;
+    }
+
     iframe {
       position: absolute;
       inset: 0;
@@ -159,6 +170,16 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .dblhint {
+      position: absolute;
+      top: 6px;
+      left: 14px;
+      z-index: 2;
+      color: rgba(255,255,255,.45);
+      font-size: 11px;
+      pointer-events: none;
     }
 
     .hidden-ui .top,
@@ -192,10 +213,12 @@
 
     <div class="hint">
       Formatos admitidos: <b>https://www.youtube.com/watch?v=ID</b>, <b>https://youtu.be/ID</b>, <b>https://www.youtube.com/shorts/ID</b> o solo el <b>ID</b>.
-      Si pegas el enlace en la URL de GitHub Pages, esta página lo detecta automáticamente.
+      En el reproductor, el doble clic funciona en la franja superior. La tecla <b>F</b> también agranda.
     </div>
 
     <div class="player" id="playerBox">
+      <div class="doubleclick-bar" id="dblBar" title="Doble clic para agrandar"></div>
+
       <iframe
         id="player"
         src="about:blank"
@@ -204,6 +227,7 @@
         referrerpolicy="origin"
       ></iframe>
 
+      <div class="dblhint">doble clic aquí para agrandar</div>
       <div class="footer" id="footerInfo">vMix YouTube Embed</div>
     </div>
   </div>
@@ -215,6 +239,7 @@
     const fsBtn = document.getElementById('fsBtn');
     const player = document.getElementById('player');
     const playerBox = document.getElementById('playerBox');
+    const dblBar = document.getElementById('dblBar');
     const footerInfo = document.getElementById('footerInfo');
 
     let muted = true;
@@ -381,6 +406,11 @@
 
     muteBtn.addEventListener('click', toggleMute);
     fsBtn.addEventListener('click', requestPageFullscreen);
+
+    dblBar.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      requestPageFullscreen();
+    });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
