@@ -141,42 +141,17 @@
       background: #000;
     }
 
-    .gesture-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 3;
-      background: transparent;
-      cursor: default;
-    }
-
-    .overlay {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.05));
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .2s ease;
-      z-index: 4;
-    }
-
-    .overlay.show { opacity: 1; }
-
-    .badge {
-      background: rgba(0,0,0,.72);
-      border: 1px solid rgba(255,255,255,.12);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 14px;
-    }
-
-    .muteBtn {
+    .controls {
       position: absolute;
       top: 12px;
       right: 12px;
       z-index: 5;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .controls button {
       min-width: 42px;
       height: 42px;
       border-radius: 12px;
@@ -186,18 +161,8 @@
       backdrop-filter: blur(8px);
     }
 
-    .playBtn {
-      position: absolute;
-      top: 12px;
-      right: 76px;
-      z-index: 5;
-      min-width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      padding: 0 12px;
-      background: rgba(20, 28, 40, .82);
-      border: 1px solid rgba(255,255,255,.12);
-      backdrop-filter: blur(8px);
+    .controls button:hover {
+      background: rgba(36, 49, 72, .92);
     }
 
     .footer {
@@ -239,18 +204,18 @@
   </style>
 </head>
 <body>
-  <div class="wrap" id="wrap">
+  <div class="wrap">
     <div class="top">
       <div class="title">YouTube local para vMix</div>
       <input id="url" placeholder="Pega un link completo, un ID o un video corto" />
       <button id="loadBtn" class="good">Cargar</button>
       <button class="secondary" id="muteBtn">Mutear</button>
-      <button class="secondary" id="playBtn">Pausa</button>
+      <button class="secondary" id="fsBtnTop">Pantalla</button>
     </div>
 
     <div class="hint">
       Formatos admitidos: <b>https://www.youtube.com/watch?v=ID</b>, <b>https://youtu.be/ID</b>, <b>https://www.youtube.com/shorts/ID</b> o solo el <b>ID</b>.
-      Si pegas el enlace en la URL de GitHub Pages, esta página lo detecta automáticamente.
+      Si pegas el enlace en la URL de GitHub Pages, esta página lo detecta automáticamente. La pantalla completa también funciona con la tecla <b>F</b>.
     </div>
 
     <div class="player" id="playerBox">
@@ -262,46 +227,31 @@
         referrerpolicy="origin"
       ></iframe>
 
-      <div class="gesture-layer" id="gestureLayer" title="Doble clic sobre el video para agrandar"></div>
-
-      <button class="muteBtn" id="muteBtn2">Mutear</button>
-      <button class="playBtn" id="playBtn2">Pausa</button>
-
-      <div class="overlay" id="overlay">
-        <div class="badge" id="statusText">Cargando video...</div>
+      <div class="controls">
+        <button class="secondary" id="playBtn">Pausa</button>
+        <button class="secondary" id="muteBtn2">Mutear</button>
+        <button class="secondary" id="fsBtn">⛶</button>
       </div>
 
-      <div class="footer" id="footerInfo">Doble clic sobre el video para agrandar</div>
+      <div class="footer" id="footerInfo">vMix YouTube Embed</div>
     </div>
   </div>
 
   <script>
     const input = document.getElementById('url');
     const loadBtn = document.getElementById('loadBtn');
-
     const muteBtn = document.getElementById('muteBtn');
     const muteBtn2 = document.getElementById('muteBtn2');
-
     const playBtn = document.getElementById('playBtn');
-    const playBtn2 = document.getElementById('playBtn2');
-
+    const fsBtn = document.getElementById('fsBtn');
+    const fsBtnTop = document.getElementById('fsBtnTop');
     const player = document.getElementById('player');
     const playerBox = document.getElementById('playerBox');
-    const gestureLayer = document.getElementById('gestureLayer');
-    const overlay = document.getElementById('overlay');
-    const statusText = document.getElementById('statusText');
     const footerInfo = document.getElementById('footerInfo');
 
     let muted = true;
     let currentVideoId = '';
     let pseudoFullscreen = false;
-
-    function showMessage(text, ms = 1200) {
-      statusText.textContent = text;
-      overlay.classList.add('show');
-      window.clearTimeout(showMessage._t);
-      showMessage._t = window.setTimeout(() => overlay.classList.remove('show'), ms);
-    }
 
     function safeDecode(text) {
       try {
@@ -362,7 +312,7 @@
     function loadVideo(raw, fromAuto = false) {
       const id = extractVideoId(raw);
       if (!id) {
-        showMessage('No se pudo reconocer el video.', 1800);
+        footerInfo.textContent = 'No se pudo reconocer el video.';
         return;
       }
 
@@ -373,8 +323,12 @@
       localStorage.setItem('lastVideoId', id);
       normalizeAddressBar(id);
 
-      showMessage(fromAuto ? 'Video cargado' : 'Cargando video...', 900);
-      footerInfo.textContent = `ID: ${id} • Doble clic para agrandar`;
+      footerInfo.textContent = `ID: ${id}`;
+      if (!fromAuto) {
+        setTimeout(() => {
+          footerInfo.textContent = `ID: ${id} • YouTube listo`;
+        }, 900);
+      }
     }
 
     function getIncomingSource() {
@@ -408,17 +362,6 @@
       return decodedPath;
     }
 
-    function isPlaying() {
-      return player.src && player.src !== 'about:blank';
-    }
-
-    function updateButtons() {
-      muteBtn.textContent = muted ? 'Desmutear' : 'Mutear';
-      muteBtn2.textContent = muted ? 'Desmutear' : 'Mutear';
-      playBtn.textContent = isPlaying() ? 'Pausa' : 'Play';
-      playBtn2.textContent = isPlaying() ? 'Pausa' : 'Play';
-    }
-
     function toggleMute() {
       muted = !muted;
       muteBtn.textContent = muted ? 'Desmutear' : 'Mutear';
@@ -432,29 +375,57 @@
       const raw = input.value || localStorage.getItem('lastSource') || currentVideoId || '';
       if (!raw) return;
 
-      const id = extractVideoId(raw);
-      if (!id) return;
-
       if (player.src && player.src !== 'about:blank') {
         if (player.src.includes('autoplay=1')) {
           player.src = player.src.replace('autoplay=1', 'autoplay=0');
-          showMessage('Pausa', 700);
+          playBtn.textContent = 'Play';
+          footerInfo.textContent = 'Pausado';
         } else {
           player.src = player.src.replace('autoplay=0', 'autoplay=1');
-          showMessage('Play', 700);
+          playBtn.textContent = 'Pausa';
+          footerInfo.textContent = 'Reproduciendo';
         }
       } else {
         loadVideo(raw);
       }
-
-      updateButtons();
     }
 
-    function toggleVisualFullscreen() {
+    async function requestPageFullscreen() {
+      const el = playerBox;
+
+      try {
+        if (!document.fullscreenElement) {
+          if (el.requestFullscreen) {
+            await el.requestFullscreen();
+            return;
+          }
+          if (el.webkitRequestFullscreen) {
+            await el.webkitRequestFullscreen();
+            return;
+          }
+          if (el.msRequestFullscreen) {
+            await el.msRequestFullscreen();
+            return;
+          }
+        } else {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+            return;
+          }
+          if (document.webkitExitFullscreen) {
+            await document.webkitExitFullscreen();
+            return;
+          }
+          if (document.msExitFullscreen) {
+            await document.msExitFullscreen();
+            return;
+          }
+        }
+      } catch (_) {}
+
       pseudoFullscreen = !pseudoFullscreen;
       playerBox.classList.toggle('fullscreen-ish', pseudoFullscreen);
       document.body.classList.toggle('hidden-ui', pseudoFullscreen);
-      showMessage(pseudoFullscreen ? 'Modo pantalla completa activado' : 'Modo pantalla completa desactivado', 1200);
     }
 
     loadBtn.addEventListener('click', () => loadVideo(input.value));
@@ -466,12 +437,9 @@
     muteBtn2.addEventListener('click', toggleMute);
 
     playBtn.addEventListener('click', togglePlay);
-    playBtn2.addEventListener('click', togglePlay);
 
-    gestureLayer.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      toggleVisualFullscreen();
-    });
+    fsBtn.addEventListener('click', requestPageFullscreen);
+    fsBtnTop.addEventListener('click', requestPageFullscreen);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -479,12 +447,14 @@
           pseudoFullscreen = false;
           playerBox.classList.remove('fullscreen-ish');
           document.body.classList.remove('hidden-ui');
-          showMessage('Modo pantalla completa desactivado', 900);
+        }
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.();
         }
       }
 
       if (e.key === 'f' || e.key === 'F') {
-        toggleVisualFullscreen();
+        requestPageFullscreen();
       }
 
       if (e.code === 'Space') {
@@ -501,6 +471,9 @@
 
     input.value = autoSource;
     loadVideo(autoSource, true);
+
+    muteBtn.textContent = muted ? 'Desmutear' : 'Mutear';
+    muteBtn2.textContent = muted ? 'Desmutear' : 'Mutear';
 
     footerInfo.textContent = window.location.hostname ? window.location.origin : 'local';
   </script>
